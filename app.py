@@ -7,20 +7,29 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import os
 
+
+
+
+
 # ─── APP INITIALIZE ───
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'medguard-secret-key-2024'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///medguard.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Ye line change karo
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL',
+    'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'medguard.db')
+)
 
 # ─── EXTENSIONS ───
 db = SQLAlchemy(app)
+with app.app_context():
+    db.create_all()
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please login to access this page.'
 
-with app.app_context():
-    db.create_all()
 
 @login_manager.unauthorized_handler
 def unauthorized():

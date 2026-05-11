@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — MedGuard AI{% endblock %}
+
+{% block extra_css %}
+<style>
+.dash-page {
+  min-height: calc(100vh - var(--nav-h));
+  background: linear-gradient(135deg,#060d1f 0%,#0a1628 45%,#0d1f3c 75%,#081420 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 48px 0;
+}
+.dash-grid-bg {
+  position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,212,170,0.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,170,0.018) 1px,transparent 1px);
+  background-size:60px 60px;
+}
+.dash-blob{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;}
+.db1{width:500px;height:500px;top:-150px;right:-80px;background:radial-gradient(circle,rgba(0,212,170,0.06) 0%,transparent 68%);animation:dbd 16s ease-in-out infinite;}
+.db2{width:400px;height:400px;bottom:-100px;left:-60px;background:radial-gradient(circle,rgba(99,102,241,0.06) 0%,transparent 68%);animation:dbd 20s ease-in-out infinite reverse;}
+@keyframes dbd{0%,100%{transform:translate(0,0)}50%{transform:translate(20px,-18px)}}
+
+.dash-inner {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 var(--px);
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ── TOP BAR ── */
+.dash-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.dash-welcome {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dash-greeting {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+.dash-greeting span { color: var(--teal); }
+.dash-date {
+  font-size: 13px;
+  color: var(--text-3);
+  font-family: var(--mono);
+}
+
+.btn-check-now {
+  background: linear-gradient(135deg,var(--teal),var(--indigo));
+  color: #fff; border: none;
+  padding: 11px 24px; border-radius: 10px;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: all 0.25s;
+  box-shadow: 0 4px 16px rgba(0,212,170,0.25);
+  font-family: var(--font);
+}
+.btn-check-now:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,212,170,0.38);
+  color: #fff;
+}
+
+/* ── STATS CARDS ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 16px;
+}
+.stat-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content:'';position:absolute;
+  top:0;left:0;right:0;height:2px;
+  border-radius:16px 16px 0 0;
+  opacity:0;transition:opacity 0.25s;
+}
+.stat-card:hover { border-color:rgba(255,255,255,0.14); transform:translateY(-3px); }
+.stat-card:hover::before { opacity:1; }
+
+.sc-total::before  { background:linear-gradient(90deg,var(--teal),var(--indigo)); }
+.sc-high::before   { background:linear-gradient(90deg,#f87171,#ef4444); }
+.sc-medium::before { background:linear-gradient(90deg,#fbbf24,#f59e0b); }
+.sc-low::before    { background:linear-gradient(90deg,var(--teal),#00b894); }
+
+.stat-icon {
+  width: 40px; height: 40px;
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.sc-total  .stat-icon { background:rgba(0,212,170,0.1);  border:1px solid rgba(0,212,170,0.2); }
+.sc-high   .stat-icon { background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.2); }
+.sc-medium .stat-icon { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); }
+.sc-low    .stat-icon { background:rgba(0,212,170,0.1);  border:1px solid rgba(0,212,170,0.2); }
+
+.stat-num {
+  font-size: 32px; font-weight: 750;
+  letter-spacing: -1px; line-height: 1;
+  color: var(--text);
+}
+.sc-high   .stat-num { color: #f87171; }
+.sc-medium .stat-num { color: #fbbf24; }
+.sc-low    .stat-num { color: var(--teal); }
+
+.stat-lbl { font-size: 12.5px; color: var(--text-3); font-weight: 500; }
+
+/* ── MAIN CONTENT — 2 col ── */
+.dash-content {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ── HISTORY TABLE ── */
+.history-panel {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.panel-head {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel-head-title {
+  font-size: 15px; font-weight: 650;
+  color: var(--text); letter-spacing: -0.2px;
+}
+.panel-head-sub {
+  font-size: 12px; color: var(--text-3);
+  font-family: var(--mono);
+}
+
+/* empty history */
+.history-empty {
+  padding: 52px 24px;
+  text-align: center;
+}
+.he-icon {
+  font-size: 36px; margin-bottom: 14px;
+}
+.he-title { font-size: 15px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+.he-sub   { font-size: 13px; color: var(--text-3); line-height: 1.6; margin-bottom: 20px; }
+
+/* history items */
+.history-list { display: flex; flex-direction: column; }
+.history-item {
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: background 0.18s;
+}
+.history-item:last-child { border-bottom: none; }
+.history-item:hover { background: rgba(255,255,255,0.025); }
+
+.hi-risk-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%; flex-shrink: 0;
+}
+.dot-HIGH   { background:#f87171; box-shadow:0 0 6px rgba(239,68,68,0.5); }
+.dot-MEDIUM { background:#fbbf24; box-shadow:0 0 6px rgba(245,158,11,0.5); }
+.dot-LOW    { background:var(--teal); box-shadow:0 0 6px rgba(0,212,170,0.5); }
+.dot-UNKNOWN{ background:var(--text-3); }
+
+.hi-main { flex: 1; min-width: 0; }
+.hi-input {
+  font-size: 13.5px; font-weight: 500;
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+.hi-meta {
+  font-size: 11.5px; color: var(--text-3);
+  display: flex; gap: 8px; align-items: center;
+}
+.hi-meta-sep { opacity: 0.4; }
+
+.hi-badge {
+  font-size: 10px; font-weight: 700;
+  font-family: var(--mono); letter-spacing: 0.08em;
+  padding: 3px 10px; border-radius: 20px;
+  text-transform: uppercase; flex-shrink: 0;
+}
+.badge-HIGH   { background:rgba(239,68,68,0.12);  color:#f87171; border:1px solid rgba(239,68,68,0.25); }
+.badge-MEDIUM { background:rgba(245,158,11,0.12); color:#fbbf24; border:1px solid rgba(245,158,11,0.25); }
+.badge-LOW    { background:rgba(0,212,170,0.12);  color:var(--teal); border:1px solid rgba(0,212,170,0.25); }
+.badge-UNKNOWN{ background:rgba(255,255,255,0.06);color:var(--text-2); border:1px solid rgba(255,255,255,0.1); }
+
+/* ── RIGHT SIDEBAR ── */
+.sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+/* risk breakdown */
+.breakdown-panel {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 22px;
+}
+.bp-title {
+  font-size: 13.5px; font-weight: 650;
+  color: var(--text); margin-bottom: 18px;
+}
+
+.bp-bar-row { display: flex; flex-direction: column; gap: 12px; }
+.bp-bar-item { display: flex; flex-direction: column; gap: 6px; }
+.bp-bar-top  {
+  display: flex; justify-content: space-between;
+  align-items: center;
+}
+.bp-bar-label { font-size: 12px; color: var(--text-2); font-weight: 500; }
+.bp-bar-count { font-size: 12px; color: var(--text-3); font-family: var(--mono); }
+.bp-bar-track {
+  height: 6px; border-radius: 3px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.bp-bar-fill {
+  height: 100%; border-radius: 3px;
+  transition: width 1s ease;
+}
+.fill-high   { background: linear-gradient(90deg,#f87171,#ef4444); }
+.fill-medium { background: linear-gradient(90deg,#fbbf24,#f59e0b); }
+.fill-low    { background: linear-gradient(90deg,var(--teal),#00b894); }
+
+/* tips panel */
+.tips-panel {
+  background: rgba(0,212,170,0.05);
+  border: 1px solid rgba(0,212,170,0.15);
+  border-radius: 18px;
+  padding: 22px;
+}
+.tips-title {
+  font-size: 13px; font-weight: 650;
+  color: var(--teal); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 7px;
+}
+.tip-item {
+  display: flex; align-items: flex-start;
+  gap: 9px; margin-bottom: 11px;
+  font-size: 12.5px; color: var(--text-2);
+  line-height: 1.55;
+}
+.tip-item:last-child { margin-bottom: 0; }
+.tip-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--teal); flex-shrink: 0; margin-top: 5px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .stats-grid { grid-template-columns: repeat(2,1fr); }
+  .dash-content { grid-template-columns: 1fr; }
+  .sidebar { display: grid; grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  .stats-grid { grid-template-columns: repeat(2,1fr); }
+  .dash-topbar { flex-direction: column; align-items: flex-start; }
+  .sidebar { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dash-page">
+  <div class="dash-grid-bg"></div>
+  <div class="dash-blob db1"></div>
+  <div class="dash-blob db2"></div>
+
+  <div class="dash-inner">
+
+    <!-- TOP BAR -->
+    <div class="dash-topbar">
+      <div class="dash-welcome">
+        <div class="dash-greeting">
+          Welcome back, <span>{{ current_user.name.split()[0] }}</span> 👋
+        </div>
+        <div class="dash-date" id="dashDate"></div>
+      </div>
+      <a href="{{ url_for('checker') }}" class="btn-check-now">
+        <i class="bi bi-shield-check"></i> Check a Medicine
+      </a>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card sc-total">
+        <div class="stat-icon">📊</div>
+        <div class="stat-num">{{ total }}</div>
+        <div class="stat-lbl">Total Checks</div>
+      </div>
+      <div class="stat-card sc-high">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-num">{{ high }}</div>
+        <div class="stat-lbl">High Risk</div>
+      </div>
+      <div class="stat-card sc-medium">
+        <div class="stat-icon">🔶</div>
+        <div class="stat-num">{{ medium }}</div>
+        <div class="stat-lbl">Medium Risk</div>
+      </div>
+      <div class="stat-card sc-low">
+        <div class="stat-icon">✅</div>
+        <div class="stat-num">{{ low }}</div>
+        <div class="stat-lbl">Safe / Low Risk</div>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="dash-content">
+
+      <!-- HISTORY -->
+      <div class="history-panel">
+        <div class="panel-head">
+          <div class="panel-head-title">Check History</div>
+          <div class="panel-head-sub">{{ total }} total</div>
+        </div>
+
+        {% if checks %}
+          <div class="history-list">
+            {% for check in checks %}
+              <div class="history-item">
+                <div class="hi-risk-dot dot-{{ check.risk_level or 'UNKNOWN' }}"></div>
+                <div class="hi-main">
+                  <div class="hi-input">{{ check.input_text }}</div>
+                  <div class="hi-meta">
+                    <span>{{ check.medicine or 'Unknown' }}</span>
+                    <span class="hi-meta-sep">·</span>
+                    <span>{{ check.created_at.strftime('%b %d, %Y') }}</span>
+                    {% if check.condition and check.condition != 'Not clearly detected' %}
+                      <span class="hi-meta-sep">·</span>
+                      <span>{{ check.condition }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+                <span class="hi-badge badge-{{ check.risk_level or 'UNKNOWN' }}">
+                  {{ check.risk_level or 'Unknown' }}
+                </span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="history-empty">
+            <div class="he-icon">🔬</div>
+            <div class="he-title">No checks yet</div>
+            <div class="he-sub">You haven't analyzed any medicines yet. Start by checking your first medication below.</div>
+            <a href="{{ url_for('checker') }}" class="btn-check-now">
+              <i class="bi bi-shield-check"></i> Check a Medicine
+            </a>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+
+        <!-- Risk Breakdown -->
+        <div class="breakdown-panel">
+          <div class="bp-title">Risk Breakdown</div>
+          <div class="bp-bar-row">
+            <div class="bp-bar-item">
+              <div class="bp-bar-top">
+                <span class="bp-bar-label">High Risk</span>
+                <span class="bp-bar-count">{{ high }}</span>
+              </div>
+              <div class="bp-bar-track">
+                <div class="bp-bar-fill fill-high"
+                     style="width:{{ ((high / total * 100)|round|int) if total > 0 else 0 }}%">
+                </div>
+              </div>
+            </div>
+            <div class="bp-bar-item">
+              <div class="bp-bar-top">
+                <span class="bp-bar-label">Medium Risk</span>
+                <span class="bp-bar-count">{{ medium }}</span>
+              </div>
+              <div class="bp-bar-track">
+                <div class="bp-bar-fill fill-medium"
+                     style="width:{{ ((medium / total * 100)|round|int) if total > 0 else 0 }}%">
+                </div>
+              </div>
+            </div>
+            <div class="bp-bar-item">
+              <div class="bp-bar-top">
+                <span class="bp-bar-label">Low / Safe</span>
+                <span class="bp-bar-count">{{ low }}</span>
+              </div>
+              <div class="bp-bar-track">
+                <div class="bp-bar-fill fill-low"
+                     style="width:{{ ((low / total * 100)|round|int) if total > 0 else 0 }}%">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Safety Tips -->
+        <div class="tips-panel">
+          <div class="tips-title">
+            <i class="bi bi-lightbulb"></i> Safety Tips
+          </div>
+          <div class="tip-item">
+            <div class="tip-dot"></div>
+            <span>Never take antibiotics for viral infections like flu or cold.</span>
+          </div>
+          <div class="tip-item">
+            <div class="tip-dot"></div>
+            <span>Do not give Disprin or Aspirin to children under 16.</span>
+          </div>
+          <div class="tip-item">
+            <div class="tip-dot"></div>
+            <span>Avoid taking two NSAIDs together — serious bleeding risk.</span>
+          </div>
+          <div class="tip-item">
+            <div class="tip-dot"></div>
+            <span>Always complete your antibiotic course — do not stop early.</span>
+          </div>
+          <div class="tip-item">
+            <div class="tip-dot"></div>
+            <span>Prescription-only drugs require a doctor's consultation first.</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Live date
+const d = new Date();
+const options = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+const el = document.getElementById('dashDate');
+if(el) el.textContent = d.toLocaleDateString('en-US', options);
+</script>
+{% endblock %}

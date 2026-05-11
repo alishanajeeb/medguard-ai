@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}MedGuard AI{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal:   #00d4aa;
+      --indigo: #6366f1;
+      --bg:     #060d1f;
+      --border: rgba(255,255,255,0.08);
+      --text:   #ffffff;
+      --text-2: rgba(255,255,255,0.62);
+      --text-3: rgba(255,255,255,0.35);
+      --font:   'DM Sans', sans-serif;
+      --mono:   'DM Mono', monospace;
+      --nav-h:  66px;
+      --px:     60px;
+      --max-w: 1800px;
+    }
+    
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    main { flex: 1; display: flex; flex-direction: column; }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: rgba(0,212,170,0.25); border-radius: 2px; }
+
+    /* ── NAVBAR ── */
+    .mg-nav {
+      height: var(--nav-h);
+      display: flex;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(6,13,31,0.95);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .mg-nav-inner {
+      width: 100%;
+      padding: 0 var(--px);
+      display: flex;
+      align-items: center;
+    }
+
+    /* Logo — left */
+    .mg-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .mg-logo-svg { width: 36px; height: 36px; flex-shrink: 0; }
+    .mg-logo-name {
+      font-size: 15px; font-weight: 700;
+      color: var(--text); letter-spacing: -0.3px;
+      line-height: 1.1; display: block;
+    }
+    .mg-logo-tag {
+      font-size: 9px; color: var(--teal);
+      font-family: var(--mono);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      line-height: 1; display: block; margin-top: 2px;
+    }
+
+    /* Center links */
+    .mg-nav-links {
+      display: flex; align-items: center;
+      gap: 2px; list-style: none;
+      margin: 0 auto;
+    }
+    .mg-nav-links a {
+      font-size: 14px; font-weight: 500;
+      color: var(--text-3); text-decoration: none;
+      padding: 6px 16px; border-radius: 8px;
+      transition: all 0.18s; white-space: nowrap;
+    }
+    .mg-nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+    .mg-nav-links a.active { color: var(--teal); background: rgba(0,212,170,0.07); }
+
+    /* Right actions */
+    .mg-nav-actions {
+      display: flex; align-items: center;
+      gap: 10px; flex-shrink: 0;
+    }
+    .mg-btn-ghost {
+      font-size: 13.5px; font-weight: 500; color: var(--text-2);
+      background: transparent; border: 1px solid var(--border);
+      padding: 7px 18px; border-radius: 9px;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.18s;
+      display: inline-flex; align-items: center;
+    }
+    .mg-btn-ghost:hover { border-color: rgba(255,255,255,0.22); color: var(--text); background: rgba(255,255,255,0.05); }
+
+    .mg-btn-primary {
+      font-size: 13.5px; font-weight: 600; color: #fff;
+      background: linear-gradient(135deg, var(--teal), var(--indigo));
+      border: none; padding: 8px 20px; border-radius: 9px;
+      cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: all 0.22s;
+      box-shadow: 0 3px 14px rgba(0,212,170,0.22);
+    }
+    .mg-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 7px 22px rgba(0,212,170,0.38); color: #fff; }
+
+    .mg-user-chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 9px;
+      background: rgba(0,212,170,0.07);
+      border: 1px solid rgba(0,212,170,0.16);
+    }
+    .mg-user-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); animation: udot 2s ease-in-out infinite; }
+    @keyframes udot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .mg-user-name { font-size: 13px; font-weight: 600; color: var(--teal); }
+
+    .mg-hamburger {
+      display: none; background: transparent;
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 7px 9px; cursor: pointer;
+      flex-direction: column; gap: 4px;
+      flex-shrink: 0; margin-left: 12px;
+    }
+    .mg-hamburger span { display: block; width: 17px; height: 1.5px; background: var(--text-2); border-radius: 1px; }
+
+    .mg-mob {
+      display: none; position: fixed;
+      top: var(--nav-h); left: 0; right: 0;
+      background: rgba(6,13,31,0.97);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px 18px; z-index: 999;
+    }
+    .mg-mob.open { display: block; }
+    .mg-mob a {
+      display: block; padding: 12px 4px;
+      font-size: 14px; font-weight: 500;
+      color: var(--text-2); text-decoration: none;
+      border-bottom: 1px solid var(--border); transition: color 0.18s;
+    }
+    .mg-mob a:last-child { border-bottom: none; }
+    .mg-mob a:hover { color: var(--teal); }
+
+    /* Alerts */
+    .mg-alerts { padding: 14px var(--px) 0; width: 100%; }
+    .mg-alert {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 16px; border-radius: 10px;
+      font-size: 13.5px; font-weight: 500; margin-bottom: 8px;
+    }
+    .mg-alert.success { background:rgba(0,212,170,0.08); border:1px solid rgba(0,212,170,0.2); color:var(--teal); }
+    .mg-alert.danger  { background:rgba(239,68,68,0.08);  border:1px solid rgba(239,68,68,0.2);  color:#f87171; }
+    .mg-alert-x { margin-left:auto; background:transparent; border:none; color:inherit; cursor:pointer; opacity:0.5; font-size:18px; line-height:1; padding:0; }
+    .mg-alert-x:hover { opacity:1; }
+
+    /* Footer */
+    .mg-footer {
+      border-top: 1px solid var(--border);
+      padding: 20px var(--px);
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 16px; flex-shrink: 0;
+    }
+    .mg-ft { font-size: 12px; color: var(--text-3); }
+    .mg-fstatus { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-3); }
+    .mg-fdot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); animation: udot 2s ease-in-out infinite; }
+
+    /* Shared utils */
+    .mg-wrap {
+      width: 100%;
+      max-width: var(--max-w);
+      margin: 0 auto;      /* center */
+      padding: 0 var(--px);
+  }
+    .mg-sec-label {
+      font-size: 11px; font-weight: 600; font-family: var(--mono);
+      color: var(--teal); letter-spacing: 0.14em; text-transform: uppercase;
+      margin-bottom: 10px; display: flex; align-items: center; gap: 10px;
+    }
+    .mg-sec-label::before { content:''; display:inline-block; width:20px; height:1.5px; background:var(--teal); border-radius:1px; }
+    .mg-sec-title { font-size: 36px; font-weight: 750; letter-spacing: -1px; line-height: 1.18; margin-bottom: 14px; }
+    .mg-sec-sub   { font-size: 15px; color: var(--text-3); line-height: 1.72; }
+
+    @media (max-width: 860px) {
+      :root { --px: 20px; }
+      .mg-nav-links { display: none; }
+      .mg-hamburger { display: flex; }
+      .mg-nav-actions .mg-btn-ghost { display: none; }
+      .mg-footer { flex-direction: column; text-align: center; gap: 6px; }
+      .mg-sec-title { font-size: 26px; }
+    }
+
+    {% block extra_css %}{% endblock %}
+  </style>
+</head>
+<body>
+
+  <nav class="mg-nav">
+    <div class="mg-nav-inner">
+
+      <a href="{{ url_for('index') }}" class="mg-logo">
+        <svg class="mg-logo-svg" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="lg1" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#00d4aa"/>
+              <stop offset="100%" stop-color="#6366f1"/>
+            </linearGradient>
+            <linearGradient id="lg2" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#00d4aa" stop-opacity="0.15"/>
+              <stop offset="100%" stop-color="#6366f1" stop-opacity="0.08"/>
+            </linearGradient>
+          </defs>
+          <!-- bg -->
+          <rect width="36" height="36" rx="9" fill="url(#lg2)"/>
+          <rect width="36" height="36" rx="9" fill="none" stroke="url(#lg1)" stroke-width="0.8"/>
+          <!-- shield shape -->
+          <path d="M18 6 L28 10 L28 19 C28 24 23 28 18 30 C13 28 8 24 8 19 L8 10 Z"
+            fill="none" stroke="url(#lg1)" stroke-width="1.2" stroke-linejoin="round"/>
+          <!-- ECG line inside shield -->
+          <polyline points="10,18 13,18 15,13 17,23 19,15 21,21 23,18 26,18"
+            fill="none" stroke="url(#lg1)" stroke-width="1.5"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <span class="mg-logo-name">MedGuard</span>
+          <span class="mg-logo-tag">AI · Risk Intelligence</span>
+        </div>
+      </a>
+
+      <ul class="mg-nav-links">
+        <li><a href="{{ url_for('index') }}" class="{{ 'active' if request.endpoint=='index' }}">Home</a></li>
+        {% if current_user.is_authenticated %}
+        <li><a href="{{ url_for('checker') }}"   class="{{ 'active' if request.endpoint=='checker' }}">Checker</a></li>
+        <li><a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint=='dashboard' }}">Dashboard</a></li>
+        {% endif %}
+        <li><a href="#how">How It Works</a></li>
+      </ul>
+
+      <div class="mg-nav-actions">
+        {% if current_user.is_authenticated %}
+          <div class="mg-user-chip">
+            <div class="mg-user-dot"></div>
+            <span class="mg-user-name">{{ current_user.name }}</span>
+          </div>
+          <a href="{{ url_for('logout') }}" class="mg-btn-ghost">Logout</a>
+        {% else %}
+          <a href="{{ url_for('login') }}"    class="mg-btn-ghost">Sign In</a>
+          <a href="{{ url_for('register') }}" class="mg-btn-primary">Get Started →</a>
+        {% endif %}
+      </div>
+
+      <button class="mg-hamburger" id="mgH">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="mg-mob" id="mgM">
+    <a href="{{ url_for('index') }}">Home</a>
+    {% if current_user.is_authenticated %}
+      <a href="{{ url_for('checker') }}">Checker</a>
+      <a href="{{ url_for('dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('logout') }}" style="color:#f87171">Logout</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">Sign In</a>
+      <a href="{{ url_for('register') }}" style="color:var(--teal)">Get Started →</a>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mg-alerts">
+        {% for cat, msg in messages %}
+          <div class="mg-alert {{ cat }}">
+            <i class="bi bi-{{ 'check-circle' if cat=='success' else 'exclamation-triangle' }}"></i>
+            {{ msg }}
+            <button class="mg-alert-x" onclick="this.parentElement.remove()">×</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <main>{% block content %}{% endblock %}</main>
+
+  <footer class="mg-footer">
+    <div class="mg-ft">© 2024 MedGuard AI — Educational use only. Always consult a qualified doctor.</div>
+    <div class="mg-fstatus"><div class="mg-fdot"></div>Built for Pakistan 🇵🇰</div>
+    <div class="mg-ft">AI Course Project</div>
+  </footer>
+
+  <script>
+    const h = document.getElementById('mgH');
+    const m = document.getElementById('mgM');
+    if(h && m){
+      h.addEventListener('click', () => m.classList.toggle('open'));
+      document.addEventListener('click', e => {
+        if(!h.contains(e.target) && !m.contains(e.target)) m.classList.remove('open');
+      });
+    }
+    setTimeout(() => {
+      document.querySelectorAll('.mg-alert').forEach(a => {
+        a.style.transition = 'opacity 0.4s';
+        a.style.opacity = '0';
+        setTimeout(() => a.remove(), 400);
+      });
+    }, 4000);
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

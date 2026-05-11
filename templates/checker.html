@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+{% block title %}Risk Checker — MedGuard AI{% endblock %}
+
+{% block extra_css %}
+<style>
+.checker-page {
+  min-height: calc(100vh - var(--nav-h));
+  background: linear-gradient(135deg,#060d1f 0%,#0a1628 45%,#0d1f3c 75%,#081420 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 52px 0;
+}
+
+.checker-grid-bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,212,170,0.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,170,0.018) 1px,transparent 1px);
+  background-size: 60px 60px;
+}
+.checker-blob {
+  position: absolute; border-radius: 50%;
+  filter: blur(90px); pointer-events: none;
+}
+.cb1 { width:500px;height:500px;top:-150px;right:-80px; background:radial-gradient(circle,rgba(0,212,170,0.07) 0%,transparent 68%); animation:cbd 14s ease-in-out infinite; }
+.cb2 { width:400px;height:400px;bottom:-100px;left:-60px; background:radial-gradient(circle,rgba(99,102,241,0.07) 0%,transparent 68%); animation:cbd 18s ease-in-out infinite reverse; }
+@keyframes cbd { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,-18px)} }
+
+.checker-inner {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 var(--px);
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+/* ── LEFT — Input Panel ── */
+.input-panel {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 20px;
+  padding: 32px;
+  backdrop-filter: blur(16px);
+  position: relative;
+}
+.input-panel::before {
+  content:'';position:absolute;top:0;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,212,170,0.4),transparent);
+}
+
+.panel-label {
+  font-size: 11px; font-weight: 600;
+  font-family: var(--mono);
+  color: var(--teal); letter-spacing: 0.14em;
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 20px;
+}
+.panel-label::before {
+  content:''; width:18px; height:1.5px;
+  background: var(--teal); border-radius: 1px;
+  display: inline-block;
+}
+
+.panel-title {
+  font-size: 22px; font-weight: 700;
+  letter-spacing: -0.5px; margin-bottom: 8px;
+}
+.panel-sub {
+  font-size: 13.5px; color: var(--text-3);
+  line-height: 1.6; margin-bottom: 24px;
+}
+
+/* textarea */
+.med-textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 14.5px;
+  color: var(--text);
+  font-family: var(--font);
+  resize: none;
+  height: 130px;
+  outline: none;
+  transition: all 0.2s;
+  line-height: 1.6;
+}
+.med-textarea::placeholder { color: var(--text-3); }
+.med-textarea:focus {
+  border-color: rgba(0,212,170,0.4);
+  background: rgba(0,212,170,0.03);
+  box-shadow: 0 0 0 3px rgba(0,212,170,0.07);
+}
+
+/* char count */
+.textarea-footer {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-top: 8px; margin-bottom: 20px;
+}
+.char-count { font-size: 11.5px; color: var(--text-3); font-family: var(--mono); }
+
+/* quick examples */
+.examples-label {
+  font-size: 12px; color: var(--text-3);
+  margin-bottom: 10px; font-weight: 500;
+}
+.example-chips {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 24px;
+}
+.chip {
+  font-size: 12px; color: var(--text-2);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 5px 12px; border-radius: 20px;
+  cursor: pointer; transition: all 0.2s;
+  font-family: var(--font);
+}
+.chip:hover {
+  border-color: rgba(0,212,170,0.35);
+  color: var(--teal);
+  background: rgba(0,212,170,0.06);
+}
+
+/* analyze button */
+.btn-analyze {
+  width: 100%;
+  background: linear-gradient(135deg,var(--teal),var(--indigo));
+  color: #fff; border: none;
+  padding: 14px; border-radius: 12px;
+  font-size: 15px; font-weight: 600;
+  cursor: pointer; font-family: var(--font);
+  transition: all 0.25s;
+  box-shadow: 0 4px 18px rgba(0,212,170,0.25);
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+}
+.btn-analyze:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0,212,170,0.38);
+}
+.btn-analyze:disabled {
+  opacity: 0.6; cursor: not-allowed; transform: none;
+}
+
+/* ── RIGHT — Result Panel ── */
+.result-panel {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 20px;
+  padding: 32px;
+  backdrop-filter: blur(16px);
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* empty state */
+.result-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
+.empty-icon {
+  width: 64px; height: 64px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; margin-bottom: 16px;
+}
+.empty-title { font-size: 16px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+.empty-sub   { font-size: 13px; color: var(--text-3); line-height: 1.6; max-width: 260px; }
+
+/* loading state */
+.result-loading {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.loading-spinner {
+  width: 44px; height: 44px;
+  border: 2px solid rgba(0,212,170,0.15);
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 14px; color: var(--text-3); font-family: var(--mono); letter-spacing: 0.05em; }
+
+/* result content */
+.result-content { display: none; flex-direction: column; gap: 20px; }
+
+/* risk header */
+.risk-header {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid;
+}
+.risk-header.HIGH   { background:rgba(239,68,68,0.08);  border-color:rgba(239,68,68,0.22); }
+.risk-header.MEDIUM { background:rgba(245,158,11,0.08); border-color:rgba(245,158,11,0.22); }
+.risk-header.LOW    { background:rgba(0,212,170,0.08);  border-color:rgba(0,212,170,0.22); }
+.risk-header.UNKNOWN{ background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1); }
+
+.risk-badge {
+  font-size: 11px; font-weight: 700;
+  font-family: var(--mono); letter-spacing: 0.1em;
+  padding: 4px 12px; border-radius: 20px;
+  text-transform: uppercase;
+}
+.HIGH   .risk-badge { background:rgba(239,68,68,0.2);   color:#f87171; border:1px solid rgba(239,68,68,0.3); }
+.MEDIUM .risk-badge { background:rgba(245,158,11,0.2);  color:#fbbf24; border:1px solid rgba(245,158,11,0.3); }
+.LOW    .risk-badge { background:rgba(0,212,170,0.2);   color:var(--teal); border:1px solid rgba(0,212,170,0.3); }
+.UNKNOWN .risk-badge{ background:rgba(255,255,255,0.08);color:var(--text-2); border:1px solid rgba(255,255,255,0.1); }
+
+.risk-meta { display: flex; flex-direction: column; gap: 3px; text-align: right; }
+.risk-medicine { font-size: 14px; font-weight: 600; color: var(--text); }
+.risk-condition { font-size: 12px; color: var(--text-3); }
+
+/* detected info */
+.detected-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.detected-item {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px; padding: 12px 14px;
+}
+.det-label {
+  font-size: 10px; font-weight: 600;
+  font-family: var(--mono);
+  color: var(--text-3); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 5px;
+}
+.det-value { font-size: 13.5px; font-weight: 600; color: var(--text); }
+
+/* risks list */
+.risks-section { display: flex; flex-direction: column; gap: 8px; }
+.risks-title {
+  font-size: 11px; font-weight: 600;
+  font-family: var(--mono); color: var(--text-3);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.risk-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.025);
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.risk-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  flex-shrink: 0; margin-top: 5px;
+}
+.HIGH .risk-dot   { background: #f87171; box-shadow:0 0 6px rgba(239,68,68,0.5); }
+.MEDIUM .risk-dot { background: #fbbf24; box-shadow:0 0 6px rgba(245,158,11,0.5); }
+.LOW .risk-dot    { background: var(--teal); box-shadow:0 0 6px rgba(0,212,170,0.5); }
+.UNKNOWN .risk-dot{ background: var(--text-3); }
+.risk-text { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+
+/* recommendation */
+.rec-box {
+  background: rgba(0,212,170,0.06);
+  border: 1px solid rgba(0,212,170,0.18);
+  border-radius: 12px; padding: 16px;
+  border-left: 3px solid var(--teal);
+}
+.rec-label {
+  font-size: 10px; font-weight: 600;
+  font-family: var(--mono); color: var(--teal);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.rec-text { font-size: 13.5px; color: var(--text-2); line-height: 1.65; }
+
+/* source badge */
+.source-row {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+}
+.source-badge {
+  font-size: 10px; font-family: var(--mono);
+  color: var(--text-3); letter-spacing: 0.08em;
+  display: flex; align-items: center; gap: 5px;
+}
+.source-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--teal); animation: udot 2s ease-in-out infinite;
+}
+.disclaimer-text {
+  font-size: 10.5px; color: var(--text-3);
+  text-align: right; max-width: 200px; line-height: 1.4;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 860px) {
+  .checker-inner {
+    grid-template-columns: 1fr;
+    padding: 0 var(--px);
+  }
+  .result-panel { min-height: 320px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="checker-page">
+  <div class="checker-grid-bg"></div>
+  <div class="checker-blob cb1"></div>
+  <div class="checker-blob cb2"></div>
+
+  <div class="checker-inner">
+
+    <!-- LEFT — INPUT -->
+    <div class="input-panel">
+      <div class="panel-label">Risk Checker</div>
+      <div class="panel-title">Analyze Your Medication</div>
+      <div class="panel-sub">
+        Describe in plain English or Urdu what you plan to take and why.
+        Our AI will analyze the risk instantly.
+      </div>
+
+      <textarea
+        class="med-textarea"
+        id="medInput"
+        placeholder="e.g. Taking Augmentin for flu and sore throat..."
+        maxlength="500"
+      ></textarea>
+
+      <div class="textarea-footer">
+        <span class="char-count"><span id="charCount">0</span>/500</span>
+      </div>
+
+      <div class="examples-label">Try an example:</div>
+      <div class="example-chips">
+        <span class="chip" onclick="fillExample('Taking Augmentin for flu and cold')">Augmentin for flu</span>
+        <span class="chip" onclick="fillExample('Giving Disprin to my 8 year old child for fever')">Aspirin for child</span>
+        <span class="chip" onclick="fillExample('Taking Brufen and Panadol together for headache')">Brufen + Panadol</span>
+        <span class="chip" onclick="fillExample('Taking Xanax without prescription for sleep')">Xanax without Rx</span>
+        <span class="chip" onclick="fillExample('Zetro le raha hoon zuqam ke liye')">Zetro for cold</span>
+      </div>
+
+      <button class="btn-analyze" id="analyzeBtn" onclick="analyzeRisk()">
+        <i class="bi bi-shield-check"></i>
+        Analyze Risk
+      </button>
+    </div>
+
+    <!-- RIGHT — RESULT -->
+    <div class="result-panel" id="resultPanel">
+
+      <!-- Empty state -->
+      <div class="result-empty" id="emptyState">
+        <div class="empty-icon">🔬</div>
+        <div class="empty-title">No analysis yet</div>
+        <div class="empty-sub">Describe your medication plan on the left and click Analyze Risk.</div>
+      </div>
+
+      <!-- Loading state -->
+      <div class="result-loading" id="loadingState">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Analyzing medication safety...</div>
+      </div>
+
+      <!-- Result content -->
+      <div class="result-content" id="resultContent">
+        <!-- Filled by JS -->
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── char counter ──
+const medInput = document.getElementById('medInput');
+const charCount = document.getElementById('charCount');
+medInput.addEventListener('input', () => {
+  charCount.textContent = medInput.value.length;
+});
+
+// ── fill example ──
+function fillExample(text) {
+  medInput.value = text;
+  charCount.textContent = text.length;
+  medInput.focus();
+}
+
+// ── show state ──
+function showState(state) {
+  document.getElementById('emptyState').style.display   = state==='empty'   ? 'flex' : 'none';
+  document.getElementById('loadingState').style.display = state==='loading' ? 'flex' : 'none';
+  document.getElementById('resultContent').style.display= state==='result'  ? 'flex' : 'none';
+}
+
+// ── render result ──
+function renderResult(data) {
+  const level = data.risk_level || 'UNKNOWN';
+  const risks = data.risks || [];
+
+  const riskItems = risks.map(r => `
+    <div class="risk-item">
+      <div class="risk-dot"></div>
+      <div class="risk-text">${r}</div>
+    </div>
+  `).join('');
+
+  const sourceLabel = data.source === 'ai' ? 'Groq Llama 3 AI' : 'Local Knowledge Base';
+
+  document.getElementById('resultContent').innerHTML = `
+    <div class="risk-header ${level}">
+      <span class="risk-badge">${level === 'UNKNOWN' ? 'Unknown' : level + ' Risk'}</span>
+      <div class="risk-meta">
+        <div class="risk-medicine">${data.medicine || '—'}</div>
+        <div class="risk-condition">${data.condition || '—'}</div>
+      </div>
+    </div>
+
+    <div class="detected-row">
+      <div class="detected-item">
+        <div class="det-label">Medicine</div>
+        <div class="det-value">${data.medicine || 'Not detected'}</div>
+      </div>
+      <div class="detected-item">
+        <div class="det-label">Condition</div>
+        <div class="det-value">${data.condition || 'Not detected'}</div>
+      </div>
+    </div>
+
+    <div class="risks-section">
+      <div class="risks-title">Risks Identified</div>
+      ${riskItems || '<div class="risk-item"><div class="risk-text">No specific risks detected.</div></div>'}
+    </div>
+
+    <div class="rec-box">
+      <div class="rec-label">Recommendation</div>
+      <div class="rec-text">${data.recommendation || '—'}</div>
+    </div>
+
+    <div class="source-row">
+      <div class="source-badge">
+        <div class="source-dot"></div>
+        Analyzed by ${sourceLabel}
+      </div>
+      <div class="disclaimer-text">For educational use only. Always consult a doctor.</div>
+    </div>
+  `;
+
+  // apply level class to risk dots
+  document.querySelectorAll('.risk-item .risk-dot').forEach(dot => {
+    dot.style.background = level==='HIGH' ? '#f87171' : level==='MEDIUM' ? '#fbbf24' : '#00d4aa';
+    dot.style.boxShadow  = level==='HIGH' ? '0 0 6px rgba(239,68,68,0.5)' : level==='MEDIUM' ? '0 0 6px rgba(245,158,11,0.5)' : '0 0 6px rgba(0,212,170,0.5)';
+  });
+
+  showState('result');
+}
+
+// ── main analyze function ──
+async function analyzeRisk() {
+  const text = medInput.value.trim();
+  if(!text) {
+    medInput.focus();
+    medInput.style.borderColor = 'rgba(239,68,68,0.5)';
+    setTimeout(() => medInput.style.borderColor = '', 1500);
+    return;
+  }
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="loading-spinner" style="width:18px;height:18px;border-width:2px;margin:0"></div> Analyzing...';
+  showState('loading');
+
+  try {
+    const response = await fetch('/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({ text: text })
+    });
+
+    // Check if redirected to login
+    if(response.redirected || response.status === 401 || response.status === 302) {
+      window.location.href = '/login';
+      return;
+    }
+
+    // Check content type
+    const contentType = response.headers.get('content-type');
+    if(!contentType || !contentType.includes('application/json')) {
+      throw new Error('Not JSON — probably redirected to login');
+    }
+
+    const data = await response.json();
+
+    if(data.error) {
+      throw new Error(data.error);
+    }
+
+    renderResult(data);
+
+  } catch(err) {
+    console.error('Analyze error:', err);
+    renderResult({
+      risk_level: 'UNKNOWN',
+      medicine: 'Error',
+      condition: 'Error',
+      risks: ['Error: ' + err.message],
+      recommendation: 'Please try again or refresh the page.',
+      source: 'local'
+    });
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-shield-check"></i> Analyze Risk';
+}
+
+// ── Enter key shortcut (Ctrl+Enter) ──
+medInput.addEventListener('keydown', e => {
+  if(e.ctrlKey && e.key === 'Enter') analyzeRisk();
+});
+</script>
+{% endblock %}

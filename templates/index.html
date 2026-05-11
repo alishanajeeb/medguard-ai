@@ -1,0 +1,669 @@
+
+{% extends "base.html" %}
+{% block title %}MedGuard AI — Self-Medication Risk Detector{% endblock %}
+
+{% block extra_css %}
+<style>
+
+/* ═══════════════════════════
+   HERO
+═══════════════════════════ */
+.hero {
+  flex: 1;
+  min-height: calc(100vh - var(--nav-h));
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg,#060d1f 0%,#0a1628 45%,#0d1f3c 75%,#081420 100%);
+}
+
+.hero-grid-bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,212,170,0.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,170,0.022) 1px,transparent 1px);
+  background-size: 64px 64px;
+}
+.hero-blob {
+  position: absolute; border-radius: 50%;
+  pointer-events: none; filter: blur(80px);
+}
+.blob-1 {
+  width: 520px; height: 520px; top: -130px; left: -80px;
+  background: radial-gradient(circle,rgba(0,212,170,0.07) 0%,transparent 70%);
+  animation: blobdrift 14s ease-in-out infinite;
+}
+.blob-2 {
+  width: 600px; height: 600px; bottom: -150px; right: -80px;
+  background: radial-gradient(circle,rgba(99,102,241,0.07) 0%,transparent 70%);
+  animation: blobdrift 18s ease-in-out infinite reverse;
+}
+@keyframes blobdrift { 0%,100%{transform:translate(0,0)} 50%{transform:translate(28px,-22px)} }
+
+
+.hero-inner {
+  max-width: var(--max-w);
+  width: 100%;
+  margin: 0 auto;
+  padding: 30px 58px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 80px;
+  position: relative;
+  z-index: 10;
+  
+}
+
+/* LEFT */
+.hero-left { display: flex; flex-direction: column; }
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(0,212,170,0.08);
+  border: 1px solid rgba(0,212,170,0.2);
+  padding: 7px 16px; border-radius: 50px;
+  margin-bottom: 24px; width: fit-content;
+}
+.badge-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--teal);
+  animation: bdot 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes bdot {
+  0%,100%{opacity:1;box-shadow:0 0 0 rgba(0,212,170,0)}
+  50%{opacity:0.5;box-shadow:0 0 8px rgba(0,212,170,0.6)}
+}
+.badge-text { font-size: 12.5px; font-weight: 500; color: var(--teal); white-space: nowrap; }
+
+.hero-title {
+  font-size: 50px; font-weight: 900;
+  line-height: 1; letter-spacing: -2px;
+  margin-bottom: 20px; color: var(--text);
+  text-transform: uppercase;
+}
+.hero-title-grad {
+  background: linear-gradient(135deg,var(--teal) 0%,var(--indigo) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.hero-desc {
+  font-size: 15.5px; color: var(--text-2);
+  line-height: 1.75; margin-bottom: 32px;
+  max-width: 500px; font-weight: 400;
+}
+
+.hero-btns {
+  display: flex; gap: 12px;
+  align-items: center; margin-bottom: 40px; flex-wrap: wrap;
+}
+.btn-hero-primary {
+  font-size: 14px; font-weight: 600; color: #fff;
+  background: linear-gradient(135deg,var(--teal),var(--indigo));
+  border: none; padding: 13px 28px; border-radius: 11px;
+  cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: all 0.25s;
+  box-shadow: 0 4px 20px rgba(0,212,170,0.28);
+}
+.btn-hero-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(0,212,170,0.4);
+  color: #fff;
+}
+.btn-hero-ghost {
+  font-size: 14px; font-weight: 500; color: var(--text-2);
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 13px 24px; border-radius: 11px;
+  cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: all 0.25s;
+}
+.btn-hero-ghost:hover {
+  border-color: rgba(255,255,255,0.22);
+  color: var(--text); background: rgba(255,255,255,0.04);
+}
+
+/* Stats */
+.hero-stats {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+  background: rgba(255,255,255,0.025);
+  width: fit-content;
+}
+.stat-item {
+  padding: 16px 28px;
+  display: flex; flex-direction: column; gap: 5px;
+  border-right: 1px solid var(--border);
+}
+.stat-item:last-child { border-right: none; }
+.stat-num {
+  font-size: 22px; font-weight: 700;
+  color: var(--text); letter-spacing: -0.5px; line-height: 1;
+}
+.stat-num em { color: var(--teal); font-style: normal; }
+.stat-lbl { font-size: 11.5px; color: var(--text-3); white-space: nowrap; }
+
+/* RIGHT BACTERIA */
+.hero-right {
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  height: 560px;
+}
+.bacteria-glow {
+  position: absolute; top:50%; left:50%;
+  transform: translate(-50%,-50%);
+  width: 380px; height: 380px; border-radius: 50%;
+  background: radial-gradient(circle,rgba(0,212,170,0.09) 0%,rgba(99,102,241,0.05) 45%,transparent 70%);
+  filter: blur(36px);
+  animation: glowpulse 4s ease-in-out infinite;
+  pointer-events: none;
+}
+.bacteria-glow2 {
+  position: absolute; top:50%; left:50%;
+  transform: translate(-50%,-50%);
+  width: 220px; height: 220px; border-radius: 50%;
+  background: radial-gradient(circle,rgba(0,212,170,0.14) 0%,transparent 60%);
+  filter: blur(16px);
+  animation: glowpulse 3s ease-in-out infinite reverse;
+  pointer-events: none;
+}
+@keyframes glowpulse {
+  0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.7}
+  50%{transform:translate(-50%,-50%) scale(1.18);opacity:1}
+}
+#bacteriaCanvas { position: relative; z-index: 2; width: 520px !important;
+  height: 520px !important; }
+
+/* ═══════════════════════════
+   FEATURES
+═══════════════════════════ */
+.features {
+  padding: 96px 0;
+  border-top: 1px solid var(--border);
+  background: rgba(0,0,0,0.15);
+}
+.features-header { text-align: center; margin-bottom: 56px; }
+.features-header .mg-sec-label { justify-content: center; }
+.features-header .mg-sec-title { text-align: center; }
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 20px;
+}
+.feat-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border);
+  border-radius: 18px; padding: 30px;
+  transition: all 0.3s; position: relative; overflow: hidden;
+}
+.feat-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg,rgba(0,212,170,0.04),transparent);
+  opacity: 0; transition: opacity 0.3s; border-radius: 18px;
+}
+.feat-card:hover {
+  border-color: rgba(0,212,170,0.22);
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+.feat-card:hover::before { opacity: 1; }
+.feat-icon {
+  width: 50px; height: 50px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 20px;
+}
+.fi-1 { background:rgba(0,212,170,0.1);  border:1px solid rgba(0,212,170,0.2);  }
+.fi-2 { background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); }
+.fi-3 { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); }
+.feat-title { font-size: 16px; font-weight: 650; color: var(--text); margin-bottom: 10px; letter-spacing: -0.3px; }
+.feat-desc  { font-size: 13.5px; color: var(--text-3); line-height: 1.7; }
+
+/* ═══════════════════════════
+   HOW IT WORKS
+═══════════════════════════ */
+.how {
+  padding: 96px 0;
+  border-top: 1px solid var(--border);
+}
+.how-header { text-align: center; margin-bottom: 64px; }
+.how-header .mg-sec-label { justify-content: center; }
+.how-header .mg-sec-title { text-align: center; }
+.how-header .mg-sec-sub   { text-align: center; margin: 0 auto; }
+
+.how-grid {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 28px; position: relative;
+}
+.how-grid::before {
+  content: ''; position: absolute;
+  top: 27px;
+  left: calc(12.5% + 20px); right: calc(12.5% + 20px);
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(0,212,170,0.3) 20%,
+    rgba(99,102,241,0.3) 80%,
+    transparent
+  );
+}
+.how-step { text-align: center; padding: 0 12px; }
+.how-num {
+  width: 54px; height: 54px; border-radius: 50%;
+  border: 1px solid rgba(0,212,170,0.25);
+  background: rgba(0,212,170,0.07);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 14px; font-weight: 700; color: var(--teal);
+  position: relative; z-index: 2;
+  transition: all 0.3s;
+}
+.how-step:hover .how-num {
+  background: rgba(0,212,170,0.15);
+  border-color: rgba(0,212,170,0.5);
+  box-shadow: 0 0 22px rgba(0,212,170,0.2);
+  transform: scale(1.1);
+}
+.how-title { font-size: 14.5px; font-weight: 650; color: var(--text); margin-bottom: 10px; }
+.how-desc  { font-size: 13px; color: var(--text-3); line-height: 1.7; }
+
+/* ═══════════════════════════
+   CTA
+═══════════════════════════ */
+.cta-section {
+  padding: 96px 0;
+  border-top: 1px solid var(--border);
+  background: rgba(0,0,0,0.15);
+}
+.cta-box {
+  max-width: 620px; margin: 0 auto; text-align: center;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(0,212,170,0.15);
+  border-radius: 24px; padding: 56px 48px;
+  position: relative; overflow: hidden;
+}
+.cta-box::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg,transparent,rgba(0,212,170,0.5),transparent);
+}
+.cta-box::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% -10%,rgba(0,212,170,0.06),transparent 60%);
+  pointer-events: none;
+}
+.cta-title {
+  font-size: 30px; font-weight: 750;
+  letter-spacing: -0.8px; margin-bottom: 14px;
+  background: linear-gradient(135deg,#fff,var(--teal));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.cta-desc {
+  font-size: 14.5px; color: var(--text-3);
+  line-height: 1.75; margin-bottom: 34px;
+  max-width: 440px; margin-left: auto; margin-right: auto;
+}
+.cta-btns {
+  display: flex; gap: 12px; justify-content: center;
+  flex-wrap: wrap; position: relative; z-index: 2; margin-bottom: 20px;
+}
+.cta-note { font-size: 12px; color: var(--text-3); position: relative; z-index: 2; }
+.cta-note span { color: var(--teal); }
+
+/* ═══════════════════════════
+   RESPONSIVE
+═══════════════════════════ */
+@media (max-width: 960px) {
+  .hero-inner {
+    grid-template-columns: 1fr;
+    padding: 60px 20px;
+    text-align: center;
+    gap: 48px;
+  }
+  .hero-left { align-items: center; }
+  .hero-title { font-size: 36px; }
+  .hero-desc { max-width: 100%; }
+  .hero-right { height: 340px; }
+  #bacteriaCanvas { width: 300px !important; height: 300px !important; }
+  .hero-stats { margin: 0 auto; }
+  .features-grid { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; }
+  .how-grid { grid-template-columns: repeat(2,1fr); }
+  .how-grid::before { display: none; }
+  .cta-box { margin: 0 20px; padding: 40px 28px; }
+}
+@media (max-width: 480px) {
+  .hero-title { font-size: 30px; letter-spacing: -1px; }
+  .hero-btns { flex-direction: column; align-items: stretch; }
+  .btn-hero-primary, .btn-hero-ghost { justify-content: center; }
+  .hero-stats { flex-direction: column; width: 100%; }
+  .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+  .stat-item:last-child { border-bottom: none; }
+  .cta-btns { flex-direction: column; align-items: center; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="hero-blob blob-1"></div>
+  <div class="hero-blob blob-2"></div>
+
+  <div class="hero-inner">
+
+    <!-- LEFT -->
+    <div class="hero-left">
+      <div class="hero-badge">
+        <div class="badge-dot"></div>
+        <span class="badge-text">Pakistan's First AI Medication Safety Tool</span>
+      </div>
+
+      <h1 class="hero-title">
+        Intelligent<br>
+        Self-Medication<br>
+        <span class="hero-title-grad">Risk Detection.</span>
+      </h1>
+
+      <p class="hero-desc">
+        Millions of Pakistanis take medicines without guidance every day.
+        MedGuard AI analyzes what you plan to take — and tells you exactly
+        what's dangerous, why, and what to do instead.
+      </p>
+
+      <div class="hero-btns">
+        {% if current_user.is_authenticated %}
+          <a href="{{ url_for('checker') }}" class="btn-hero-primary">
+            Check Your Medicine <i class="bi bi-arrow-right"></i>
+          </a>
+        {% else %}
+          <a href="{{ url_for('register') }}" class="btn-hero-primary">
+            Get Started Free <i class="bi bi-arrow-right"></i>
+          </a>
+        {% endif %}
+        <a href="#how" class="btn-hero-ghost">
+          <i class="bi bi-play-circle"></i> See How It Works
+        </a>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat-item">
+          <div class="stat-num"><em>99</em>%</div>
+          <div class="stat-lbl">Detection accuracy</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num"><em>50</em>K+</div>
+          <div class="stat-lbl">Checks performed</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num"><em>Free</em></div>
+          <div class="stat-lbl">Always free</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT BACTERIA -->
+    <div class="hero-right" id="heroRight">
+      <div class="bacteria-glow"></div>
+      <div class="bacteria-glow2"></div>
+      <canvas id="bacteriaCanvas" width="460" height="460"></canvas>
+    </div>
+
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="mg-wrap">
+    <div class="features-header">
+      <div class="mg-sec-label">What We Do</div>
+      <h2 class="mg-sec-title">Intelligent Risk Detection,<br>Built For Pakistan</h2>
+    </div>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon fi-1">🧠</div>
+        <div class="feat-title">Hybrid AI Engine</div>
+        <div class="feat-desc">Local rule-based system handles common medicines instantly. Unknown brands go to Groq Llama 3 — the system never says "not found."</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon fi-2">🇵🇰</div>
+        <div class="feat-title">Pakistan Specific</div>
+        <div class="feat-desc">Augmentin, Flagyl, Disprin, Brufen — local brand names covered. Output in plain Urdu-English for maximum accessibility.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon fi-3">⚡</div>
+        <div class="feat-title">Explainable Results</div>
+        <div class="feat-desc">Not just a warning — the system explains WHY it is dangerous and suggests a safer, practical alternative for your situation.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="mg-wrap">
+    <div class="how-header">
+      <div class="mg-sec-label">Process</div>
+      <h2 class="mg-sec-title">How it works</h2>
+      <p class="mg-sec-sub">From free-text input to a clear risk verdict in under 2 seconds.</p>
+    </div>
+    <div class="how-grid">
+      <div class="how-step">
+        <div class="how-num">01</div>
+        <div class="how-title">Type Your Plan</div>
+        <div class="how-desc">Write in plain English or Urdu what medicine you plan to take and why. No forms, no dropdowns.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">02</div>
+        <div class="how-title">AI Extracts</div>
+        <div class="how-desc">NLP engine detects medicine name, condition, dosage, and patient type from your free-text input.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">03</div>
+        <div class="how-title">Risk Classified</div>
+        <div class="how-desc">ML classifier and knowledge graph assign HIGH, MEDIUM, or LOW risk with a confidence score.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">04</div>
+        <div class="how-title">Get Guidance</div>
+        <div class="how-desc">Clear explanation of risks and a practical safer alternative recommended for Pakistan's context.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="mg-wrap">
+    <div class="cta-box">
+      <h2 class="cta-title">Check your medicine now</h2>
+      <p class="cta-desc">Pakistan mein har roz laakhon log bina doctor ke medicine lete hain. Ek check apki ya apke family ki jaan bacha sakta hai.</p>
+      <div class="cta-btns">
+        {% if current_user.is_authenticated %}
+          <a href="{{ url_for('checker') }}" class="btn-hero-primary">Open Checker <i class="bi bi-arrow-right"></i></a>
+        {% else %}
+          <a href="{{ url_for('register') }}" class="btn-hero-primary">Create Free Account <i class="bi bi-arrow-right"></i></a>
+          <a href="{{ url_for('login') }}" class="btn-hero-ghost">Sign In</a>
+        {% endif %}
+      </div>
+      <div class="cta-note"><span>100% free</span> · No credit card · Educational use only</div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const canvas = document.getElementById('bacteriaCanvas');
+if(canvas){
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2;
+  let time = 0, mx = 0, my = 0;
+
+  function blobR(a,t){
+    return 90
+      +Math.sin(a*3+t*.8)*13
+      +Math.sin(a*5-t*.5)*8
+      +Math.sin(a*7+t*1.1)*4
+      +Math.sin(a*2-t*.3)*10;
+  }
+
+  const spikes = Array.from({length:14},(_,i)=>({
+    baseAngle:(i/14)*Math.PI*2,
+    length:30+Math.random()*42,
+    width:1.5+Math.random()*2,
+    wave:Math.random()*Math.PI*2,
+    speed:.4+Math.random()*.6,
+    curve:(Math.random()-.5)*.8
+  }));
+  const orgs = Array.from({length:18},()=>({
+    angle:Math.random()*Math.PI*2,
+    dist:Math.random()*58,
+    r:2.5+Math.random()*5,
+    phase:Math.random()*Math.PI*2,
+    speed:.2+Math.random()*.4
+  }));
+  const chords = Array.from({length:24},()=>({
+    a1:Math.random()*Math.PI*2,
+    a2:Math.random()*Math.PI*2,
+    phase:Math.random()*Math.PI*2
+  }));
+  const pts = Array.from({length:60},()=>({
+    x:(Math.random()-.5)*400,
+    y:(Math.random()-.5)*400,
+    r:.8+Math.random()*2.2,
+    vx:(Math.random()-.5)*.28,
+    vy:(Math.random()-.5)*.28,
+    op:.2+Math.random()*.55,
+    c:Math.random()>.5?'0,212,170':'99,102,241'
+  }));
+
+  const hr = document.getElementById('heroRight');
+  if(hr){
+    hr.addEventListener('mousemove',e=>{
+      const r=canvas.getBoundingClientRect();
+      mx=(e.clientX-r.left-r.width/2)/(r.width/2);
+      my=(e.clientY-r.top-r.height/2)/(r.height/2);
+    });
+    hr.addEventListener('mouseleave',()=>{mx=0;my=0;});
+  }
+
+  function draw(t){
+    ctx.clearRect(0,0,W,H);
+    const STEPS=120;
+    const bx=cx+mx*16, by=cy+my*11;
+
+    // outer glow
+    const og=ctx.createRadialGradient(bx,by,40,bx,by,170);
+    og.addColorStop(0,'rgba(0,212,170,0.05)');
+    og.addColorStop(.5,'rgba(99,102,241,0.03)');
+    og.addColorStop(1,'transparent');
+    ctx.fillStyle=og; ctx.beginPath(); ctx.arc(bx,by,170,0,Math.PI*2); ctx.fill();
+
+    // spikes
+    spikes.forEach(sp=>{
+      const a=sp.baseAngle+Math.sin(t*sp.speed+sp.wave)*.18;
+      const br=blobR(a,t);
+      const bpx=bx+Math.cos(a)*br, bpy=by+Math.sin(a)*br;
+      const tr=br+sp.length+Math.sin(t*sp.speed*1.5+sp.wave)*8;
+      const tpx=bx+Math.cos(a+sp.curve*.2)*tr, tpy=by+Math.sin(a+sp.curve*.2)*tr;
+      const sg=ctx.createLinearGradient(bpx,bpy,tpx,tpy);
+      sg.addColorStop(0,'rgba(0,212,170,0.75)');
+      sg.addColorStop(.6,'rgba(99,102,241,0.4)');
+      sg.addColorStop(1,'rgba(99,102,241,0.0)');
+      const cpx=bx+Math.cos(a+sp.curve)*(br+sp.length*.55);
+      const cpy=by+Math.sin(a+sp.curve)*(br+sp.length*.55);
+      ctx.beginPath(); ctx.moveTo(bpx,bpy);
+      ctx.quadraticCurveTo(cpx,cpy,tpx,tpy);
+      ctx.strokeStyle=sg; ctx.lineWidth=sp.width*(1-(tr-br)/(sp.length+40));
+      ctx.lineCap='round'; ctx.stroke();
+      const tg=ctx.createRadialGradient(tpx,tpy,0,tpx,tpy,5);
+      tg.addColorStop(0,'rgba(0,212,170,0.9)'); tg.addColorStop(1,'transparent');
+      ctx.fillStyle=tg; ctx.beginPath(); ctx.arc(tpx,tpy,5,0,Math.PI*2); ctx.fill();
+    });
+
+    // body
+    ctx.beginPath();
+    for(let i=0;i<=STEPS;i++){
+      const a=(i/STEPS)*Math.PI*2, r=blobR(a,t);
+      const px=bx+Math.cos(a)*r, py=by+Math.sin(a)*r;
+      i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+    const bg=ctx.createRadialGradient(bx-22,by-22,10,bx,by,105);
+    bg.addColorStop(0,'rgba(0,212,170,0.2)');
+    bg.addColorStop(.4,'rgba(30,40,100,0.32)');
+    bg.addColorStop(1,'rgba(8,10,35,0.42)');
+    ctx.fillStyle=bg; ctx.fill();
+
+    // wireframe
+    chords.forEach(ch=>{
+      const r1=blobR(ch.a1,t)*.86, r2=blobR(ch.a2,t)*.86;
+      const p1x=bx+Math.cos(ch.a1)*r1, p1y=by+Math.sin(ch.a1)*r1;
+      const p2x=bx+Math.cos(ch.a2)*r2, p2y=by+Math.sin(ch.a2)*r2;
+      const alpha=.05+Math.abs(Math.sin(t*.5+ch.phase))*.07;
+      ctx.beginPath(); ctx.moveTo(p1x,p1y); ctx.lineTo(p2x,p2y);
+      ctx.strokeStyle=`rgba(0,212,170,${alpha})`; ctx.lineWidth=.5; ctx.stroke();
+    });
+
+    // outline
+    ctx.beginPath();
+    for(let i=0;i<=STEPS;i++){
+      const a=(i/STEPS)*Math.PI*2, r=blobR(a,t);
+      const px=bx+Math.cos(a)*r, py=by+Math.sin(a)*r;
+      i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+    const ol=ctx.createLinearGradient(bx-110,by-110,bx+110,by+110);
+    ol.addColorStop(0,'rgba(0,212,170,0.75)');
+    ol.addColorStop(.5,'rgba(99,102,241,0.55)');
+    ol.addColorStop(1,'rgba(0,212,170,0.35)');
+    ctx.strokeStyle=ol; ctx.lineWidth=1.3; ctx.stroke();
+
+    // organelles
+    orgs.forEach(o=>{
+      const a=o.angle+t*o.speed*.15;
+      const px=bx+Math.cos(a)*o.dist, py=by+Math.sin(a)*o.dist;
+      const alpha=.4+Math.sin(t*o.speed+o.phase)*.3;
+      const og2=ctx.createRadialGradient(px,py,0,px,py,o.r*2.5);
+      og2.addColorStop(0,`rgba(0,212,170,${alpha})`);
+      og2.addColorStop(.5,`rgba(99,102,241,${alpha*.5})`);
+      og2.addColorStop(1,'transparent');
+      ctx.fillStyle=og2; ctx.beginPath(); ctx.arc(px,py,o.r*2.5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=`rgba(180,255,240,${alpha*.9})`;
+      ctx.beginPath(); ctx.arc(px,py,o.r*.7,0,Math.PI*2); ctx.fill();
+    });
+
+    // particles
+    pts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy;
+      if(Math.abs(p.x)>200)p.vx*=-1;
+      if(Math.abs(p.y)>200)p.vy*=-1;
+      const px=bx+p.x, py=by+p.y;
+      const pg=ctx.createRadialGradient(px,py,0,px,py,p.r*3);
+      pg.addColorStop(0,`rgba(${p.c},${p.op})`);
+      pg.addColorStop(1,'transparent');
+      ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(px,py,p.r*3,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=`rgba(255,255,255,${p.op*.7})`;
+      ctx.beginPath(); ctx.arc(px,py,p.r*.5,0,Math.PI*2); ctx.fill();
+    });
+
+    // specular
+    const sp2=ctx.createRadialGradient(bx-30,by-30,2,bx-30,by-30,42);
+    sp2.addColorStop(0,'rgba(255,255,255,0.1)'); sp2.addColorStop(1,'transparent');
+    ctx.fillStyle=sp2; ctx.beginPath(); ctx.arc(bx-30,by-30,42,0,Math.PI*2); ctx.fill();
+  }
+
+  function animate(){ time+=.012; draw(time); requestAnimationFrame(animate); }
+  animate();
+}
+</script>
+{% endblock %}

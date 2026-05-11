@@ -181,6 +181,11 @@ def test_analyze():
     result = analyze_input(user_input)
     return jsonify(result)
 
+# Ensure DB tables exist on every startup
+@app.before_request
+def create_tables():
+    db.create_all()
+
 # ─── RUN ───
 if __name__ == '__main__':
     with app.app_context():

@@ -52,8 +52,9 @@ def unauthorized():
         return jsonify({'error': 'unauthorized', 'redirect': '/login'}), 401
     return redirect(url_for('login'))
 
-# ─── CREATE TABLES ───
-with app.app_context():
+# ─── THIS IS THE KEY FIX ───
+@app.before_request
+def create_tables():
     db.create_all()
 
 # ─── ROUTES ───
